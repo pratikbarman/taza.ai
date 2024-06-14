@@ -77,15 +77,11 @@ const shutdown = async () => {
     }
 };
 
-async function puppeteerMiddleware(req, res, next) {
+
+ app.use(async (req, res, next) => {
     await launchBrowser();
     next();
-}
-
-//// app.use(async (req, res, next) => {
-//     await launchBrowser();
-//     next();
-// });
+});
 
 app.get('/optimize', puppeteerMiddleware, async (req, res) => {
     const { youtube_url, additional_context, voices_selection, output_language } = req.query;
