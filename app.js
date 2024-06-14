@@ -63,7 +63,7 @@ const launchBrowser = async () => {
             });
         }
     } catch (error) {
-        logger.error(error);
+        console.error("Failed Launce Puppeter",error)
     }
 };
 
