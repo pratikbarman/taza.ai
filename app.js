@@ -83,7 +83,7 @@ const shutdown = async () => {
     next();
 });
 
-app.get('/optimize', puppeteerMiddleware, async (req, res) => {
+app.get('/optimize', async (req, res) => {
     const { youtube_url, additional_context, voices_selection, output_language } = req.query;
     const videoId = getYouTubeVideoUrl(youtube_url)
 
