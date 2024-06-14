@@ -89,10 +89,9 @@ async function puppeteerMiddleware(req, res, next) {
 
 app.get('/optimize', puppeteerMiddleware, async (req, res) => {
     const { youtube_url, additional_context, voices_selection, output_language } = req.query;
+    const videoId = getYouTubeVideoUrl(youtube_url)
+
     try {
-
-        const videoId = getYouTubeVideoUrl(youtube_url)
-
 
         if (!videoId) {
             return res.status(400).json({ "message": "Please enter correct youtube Video URL!" });
