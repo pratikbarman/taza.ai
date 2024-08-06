@@ -63,7 +63,7 @@ const launchBrowser = async () => {
             });
         }
     } catch (error) {
-        console.error("Failed Launce Puppeter",error)
+        logger.error('Error launching browser:', { message: error.message, stack: error.stack })
     }
 };
 
@@ -73,17 +73,21 @@ const shutdown = async () => {
             await browser.close();
         }
     } catch (error) {
-        logger.error(error);
+        logger.error('Error closing browser:', { message: error.message, stack: error.stack })
     }
 };
 
-
- app.use(async (req, res, next) => {
+async function puppeteerMiddleware(req, res, next) {
     await launchBrowser();
+    next();
+}
+
+app.use(async (req, res, next) => {
+    req.setTimeout(0);
     next();
 });
 
-app.get('/optimize', async (req, res) => {
+app.get('/optimize', puppeteerMiddleware, async (req, res) => {
     const { youtube_url, additional_context, voices_selection, output_language } = req.query;
     const videoId = getYouTubeVideoUrl(youtube_url)
 
@@ -140,7 +144,7 @@ app.get('/optimize', async (req, res) => {
                     while (!page.isClosed() && statusResult.status !== "complete") {
                         // Check cache for video status if necessary
                         if (myCache.get(`progress_${videoId}`)?.status === "complete") {
-                            console.log("Video status poll completed from cache!");
+                            logger.info("Video status poll completed from cache!");
                             break;
                         }
                         statusResult = await page.evaluate(async (url) => {
@@ -165,7 +169,7 @@ app.get('/optimize', async (req, res) => {
                     }
 
                 } catch (error) {
-                    logger.error(error);
+                    logger.error('Error status poll:', { message: error.message, stack: error.stack })
                 }
             }
         });
@@ -200,7 +204,7 @@ app.get('/optimize', async (req, res) => {
 
     } catch (error) {
         myCache.set(`progress_${videoId}`, { "status": "complete" })
-        logger.error(error)
+        logger.error('Error to Video optimization:', { message: error.message, stack: error.stack })
         res.status(400).json({ "message": "An error occurred: " + error.message });
     }
 });
@@ -220,7 +224,7 @@ app.get('/status', async (req, res) => {
         }
 
     } catch (error) {
-        logger.error(error)
+        logger.error('Error status route:', { message: error.message, stack: error.stack })
         res.status(400).json({ "message": "An error occurred: " + error.message });
     }
 
