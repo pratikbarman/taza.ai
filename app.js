@@ -102,6 +102,12 @@ app.get('/optimize', puppeteerMiddleware, async (req, res) => {
         }
 
         const page = await browser.newPage();
+
+        req.on('close', () => {
+            myCache.set(`progress_${videoId}`, { "status": "disconnected" })
+            page.close();
+        });
+
         await page.setViewport({ width: 1280, height: 720 });
         await page.goto('https://app.taja.ai/optimize', { timeout: 180000 });
 
@@ -134,48 +140,8 @@ app.get('/optimize', puppeteerMiddleware, async (req, res) => {
         };
 
 
-        page.on('request', async (request) => {
-            if (request.url() === "https://app.taja.ai/api/proxy/videos/full-optimize") {
-                try {
-                    logger.info("Video status poll started!");
-                    const intervalSeconds = 2;
-                    let statusResult = { status: "notfound" };
-
-                    while (!page.isClosed() && statusResult.status !== "complete") {
-                        // Check cache for video status if necessary
-                        if (myCache.get(`progress_${videoId}`)?.status === "complete") {
-                            logger.info("Video status poll completed from cache!");
-                            break;
-                        }
-                        statusResult = await page.evaluate(async (url) => {
-                            try {
-                                const response = await fetch(`https://app.taja.ai/api/proxy/videos/status?youtube_url=${url}`);
-                                if (!response.ok) {
-                                    throw new Error(`HTTP error! status: ${response.status}`);
-                                }
-                                const responseBody = await response.json();
-                                return responseBody;
-                            } catch (error) {
-                                return { status: 'error', message: error.message };
-                            }
-                        }, youtube_url);
-                        // Update cache with the latest status
-                        myCache.set(`progress_${videoId}`, statusResult);
-                        if (statusResult.status !== "complete") {
-                            await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
-                        } else {
-                            logger.info("Video status poll completed!");
-                        }
-                    }
-
-                } catch (error) {
-                    logger.error('Error status poll:', { message: error.message, stack: error.stack })
-                }
-            }
-        });
-
-
         logger.info("Video optimization started");
+        myCache.set(`progress_${videoId}`, { "status": "started" })
 
         const result = await page.evaluate(async (data) => {
             const response = await fetch('https://app.taja.ai/api/proxy/videos/full-optimize', {
@@ -203,7 +169,7 @@ app.get('/optimize', puppeteerMiddleware, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        myCache.set(`progress_${videoId}`, { "status": "complete" })
+        myCache.set(`progress_${videoId}`, { "status": "failed" })
         logger.error('Error to Video optimization:', { message: error.message, stack: error.stack })
         res.status(400).json({ "message": "An error occurred: " + error.message });
     }
