@@ -1,10 +1,38 @@
 const express = require('express');
+const http = require('http');
 const puppeteer = require('puppeteer');
 const path = require('path');
+const fs = require("fs")
 const winston = require('winston');
 const NodeCache = require("node-cache");
 const expressWinston = require('express-winston');
 
+// Function to get a formatted date string
+function getFormattedDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Define log directory and files with date
+const logDir = path.join(__dirname, 'logs');
+const dateStr = getFormattedDate();
+const errorLogPath = path.join(logDir, `error-${dateStr}.log`);
+const combinedLogPath = path.join(logDir, `combined-${dateStr}.log`);
+
+// Function to check and create directory if it does not exist
+function ensureLogDirectoryExists(directory) {
+    if (!fs.existsSync(directory)) {
+        fs.mkdirSync(directory, { recursive: true }); // Create directory and any missing parent directories
+    }
+}
+
+// Ensure the log directory exists
+ensureLogDirectoryExists(logDir);
+
+// Create the Winston logger
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
@@ -13,8 +41,8 @@ const logger = winston.createLogger({
     ),
     transports: [
         new winston.transports.Console(),
-        new winston.transports.File({ filename: path.join(__dirname, 'error.log'), level: 'error' }),
-        new winston.transports.File({ filename: path.join(__dirname, 'combined.log') })
+        new winston.transports.File({ filename: errorLogPath, level: 'error' }),
+        new winston.transports.File({ filename: combinedLogPath })
     ]
 });
 
@@ -22,7 +50,11 @@ const myCache = new NodeCache({ stdTTL: 86400 });
 myCache.flushAll()
 
 const app = express();
-const port = 3000;
+const port = 3004;
+
+const server = http.createServer(app);
+server.setTimeout(600000); // 10 minutes
+
 
 let browser;
 
@@ -31,11 +63,16 @@ app.use(express.json());
 
 
 // Middleware for logging requests
+// Middleware to log the real client IP address
 app.use(expressWinston.logger({
     winstonInstance: logger,
-    meta: true,
-    msg: "HTTP {{req.method}} {{req.url}}",
-    expressFormat: true,
+    meta: false, // Do not log meta data
+    msg: (req, res) => {
+        // Get the real client IP address
+        const clientIp = req.headers['cf-connecting-ip'] || req.ip;
+        return `HTTP ${req.method} ${req.url} - IP ${clientIp}`;
+    },
+    expressFormat: false,
     colorize: false
 }));
 
@@ -83,7 +120,8 @@ async function puppeteerMiddleware(req, res, next) {
 }
 
 app.use(async (req, res, next) => {
-    req.setTimeout(0);
+    req.setTimeout(600000);
+    res.setTimeout(600000);
     next();
 });
 
@@ -202,7 +240,8 @@ app.get('/', async (req, res) => {
     res.json({ message: "Server running..." })
 })
 
-const server = app.listen(port, () => {
+
+server.listen(port, () => {
     logger.info(`Server running on http://localhost:${port}`);
 });
 
