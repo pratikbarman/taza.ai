@@ -50,7 +50,7 @@ const myCache = new NodeCache({ stdTTL: 86400 });
 myCache.flushAll()
 
 const app = express();
-const port = 3004;
+const port = 3000;
 
 const server = http.createServer(app);
 server.setTimeout(600000); // 10 minutes
