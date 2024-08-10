@@ -104,8 +104,10 @@ app.get('/optimize', puppeteerMiddleware, async (req, res) => {
         const page = await browser.newPage();
 
         req.on('close', () => {
-            myCache.set(`progress_${videoId}`, { "status": "disconnected" })
-            page.close();
+            if (!page.isClosed()) {
+                myCache.set(`progress_${videoId}`, { "status": "disconnected" })
+                page.close();
+            }
         });
 
         await page.setViewport({ width: 1280, height: 720 });
