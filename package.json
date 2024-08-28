@@ -1,15 +1,16 @@
 {
   "name": "taja.ai",
   "version": "1.0.0",
-  "main": "app.js",
+  "main": "app-v2.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node app-v2.js"
   },
   "author": "Pratik Dev",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "crypto": "^1.0.1",
     "express": "^4.19.2",
     "express-winston": "^4.2.0",
     "node-cache": "^5.1.2",
