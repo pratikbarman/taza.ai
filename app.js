@@ -14,7 +14,7 @@ const launchBrowser = async () => {
     try {
         if (!browser) {
             browser = await puppeteer.launch({
-                headless: false,
+                headless: true,
                 userDataDir: path.join(__dirname, "userData")
             });
         }
